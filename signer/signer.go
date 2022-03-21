@@ -56,8 +56,6 @@ func ExecutePipeline(pipeForRunning ...job) {
 
 func SingleHash(in, out chan interface{}) {
 
-	crc32Chan := make(chan string)
-	md5Crc32Chan := make(chan string)
 	var dataInStringType string
 	var wg = &sync.WaitGroup{}
 
@@ -75,24 +73,34 @@ func SingleHash(in, out chan interface{}) {
 		// чтобы не было "перегрева" считаем md5 в последовательном режиме
 		md5 := DataSignerMd5(dataInStringType)
 
-		wg.Add(2)
+		wg.Add(1)
 
-		go crc32Worker(wg, md5, crc32Chan)
-		go crc32Worker(wg, dataInStringType, md5Crc32Chan)
-
-		tmp1 := <-md5Crc32Chan
-		tmp2 := <-crc32Chan
-
-		out <- tmp1 + "~" + tmp2
+		// запускаем в горутине и едем дальше, чтобы не ждать 1 сек
+		go singleHashWorker(wg, dataInStringType, md5, out)
 	}
 
 	wg.Wait()
 }
 
+func singleHashWorker(wg *sync.WaitGroup, data string, md5 string, out chan<- interface{}) {
+
+	crc32Chan := make(chan string)
+	md5Crc32Chan := make(chan string)
+
+	go crc32Worker(wg, md5, crc32Chan)
+	go crc32Worker(wg, data, md5Crc32Chan)
+
+	tmp1 := <-md5Crc32Chan
+	tmp2 := <-crc32Chan
+
+	out <- tmp1 + "~" + tmp2
+
+	wg.Done()
+}
+
 func crc32Worker(wg *sync.WaitGroup, data string, out chan<- string) {
 
 	out <- DataSignerCrc32(data)
-	wg.Done()
 }
 
 func MultiHash(in, out chan interface{}) {
@@ -101,17 +109,20 @@ func MultiHash(in, out chan interface{}) {
 
 	for data := range in {
 
-		wgIn := &sync.WaitGroup{}
 		forHash := make([]string, 6)
 
 		wgEx.Add(1)
-		go multiHashWorker(wgEx, wgIn, data, forHash, out)
+
+		// чтобы не ждать, пока закончится выполнение делаем горутину и едем дальше
+		go multiHashWorker(wgEx, data, forHash, out)
 	}
 
 	wgEx.Wait()
 }
 
-func multiHashWorker(wgEx *sync.WaitGroup, wgIn *sync.WaitGroup, data interface{}, forHash []string, out chan interface{}) {
+func multiHashWorker(wgEx *sync.WaitGroup, data interface{}, forHash []string, out chan interface{}) {
+
+	wgIn := &sync.WaitGroup{}
 
 	for i := 0; i < 6; i++ {
 
