@@ -50,7 +50,8 @@ const (
 )
 
 type SearchRequest struct {
-	Limit      int
+	Limit int
+	// смещение от начала
 	Offset     int    // Можно учесть после сортировки
 	Query      string // подстрока в 1 из полей
 	OrderField string
@@ -91,18 +92,21 @@ func (srv *SearchClient) FindUsers(req SearchRequest) (*SearchResponse, error) {
 	searcherParams.Add("order_field", req.OrderField)
 	searcherParams.Add("order_by", strconv.Itoa(req.OrderBy))
 
-	// структура http запроса
+	// структура http запроса в первой строке
 	searcherReq, _ := http.NewRequest("GET", srv.URL+"?"+searcherParams.Encode(), nil) //nolint:errcheck
 
+	// добавляем в тело запроса хедер AccessToken и значение к нему
 	searcherReq.Header.Add("AccessToken", srv.AccessToken)
 
 	// отправляем запрос
 	resp, err := client.Do(searcherReq)
 
+	// ошибки в отправке запроса
 	if err != nil {
 		if err, ok := err.(net.Error); ok && err.Timeout() {
 			return nil, fmt.Errorf("timeout for %s", searcherParams.Encode())
 		}
+		fmt.Println(err)
 		return nil, fmt.Errorf("unknown error %s", err)
 	}
 

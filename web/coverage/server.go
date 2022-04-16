@@ -4,8 +4,14 @@ import (
 	"net/http"
 )
 
-// тут писать SearchServer
+func SearchServer(w http.ResponseWriter, r *http.Request) {
 
-func SearchServer(w http.Response, r *http.Request) {
+	accessToken := r.Header.Get("AccessToken")
 
+	if accessToken != "AccessToken" {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	// query := r.FormValue("query")
 }
