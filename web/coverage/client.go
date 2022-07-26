@@ -85,28 +85,27 @@ func (srv *SearchClient) FindUsers(req SearchRequest) (*SearchResponse, error) {
 	// нужно для получения следующей записи, на основе которой мы скажем - можно показать переключатель следующей страницы или нет
 	req.Limit++
 
-	// записываем в созданную мапку параметры
+	// write params in map searcherParams
 	searcherParams.Add("limit", strconv.Itoa(req.Limit))
 	searcherParams.Add("offset", strconv.Itoa(req.Offset))
 	searcherParams.Add("query", req.Query)
 	searcherParams.Add("order_field", req.OrderField)
 	searcherParams.Add("order_by", strconv.Itoa(req.OrderBy))
 
-	// структура http запроса в первой строке
+	// request http struct [in first row]
 	searcherReq, _ := http.NewRequest("GET", srv.URL+"?"+searcherParams.Encode(), nil) //nolint:errcheck
 
 	// добавляем в тело запроса хедер AccessToken и значение к нему
 	searcherReq.Header.Add("AccessToken", srv.AccessToken)
 
-	// отправляем запрос
+	// send request
 	resp, err := client.Do(searcherReq)
 
-	// ошибки в отправке запроса
+	// errors in request sending
 	if err != nil {
 		if err, ok := err.(net.Error); ok && err.Timeout() {
 			return nil, fmt.Errorf("timeout for %s", searcherParams.Encode())
 		}
-		fmt.Println(err)
 		return nil, fmt.Errorf("unknown error %s", err)
 	}
 
@@ -126,7 +125,7 @@ func (srv *SearchClient) FindUsers(req SearchRequest) (*SearchResponse, error) {
 			return nil, fmt.Errorf("cant unpack error json: %s", err)
 		}
 		if errResp.Error == ErrorBadOrderField {
-			return nil, fmt.Errorf("OrderFeld %s invalid", req.OrderField)
+			return nil, fmt.Errorf("OrderField %s invalid", req.OrderField)
 		}
 		return nil, fmt.Errorf("unknown bad request error: %s", errResp.Error)
 	}
