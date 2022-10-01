@@ -201,7 +201,7 @@ func TestStatusBadRequestBadUnpackedJson(t *testing.T) {
 
 func TestStatusBadRequest(t *testing.T) {
 
-	result, err := json.Marshal(
+	result, _ := json.Marshal(
 		map[string]string{
 			"error": "something went wrong",
 		},
@@ -210,7 +210,7 @@ func TestStatusBadRequest(t *testing.T) {
 	ts := httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write(result)
+			_, _ = w.Write(result)
 		}),
 	)
 
@@ -230,7 +230,7 @@ func TestStatusBadRequest(t *testing.T) {
 
 	returnError := fmt.Errorf("unknown bad request error: something went wrong")
 
-	_, err = Client.FindUsers(Request)
+	_, err := Client.FindUsers(Request)
 
 	if err.Error() != returnError.Error() {
 		t.Errorf("[TestStatusBadRequestBadUnpackedJson] expected error, got %v", err.Error())
@@ -246,7 +246,7 @@ func TestStatusBadRequestErrorBadOrderField(t *testing.T) {
 	ts := httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write(result)
+			_, _ = w.Write(result)
 		}),
 	)
 

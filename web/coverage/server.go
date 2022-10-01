@@ -40,7 +40,7 @@ func SearchServer(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Bad AccessToken")
 		w.WriteHeader(http.StatusUnauthorized)
 		emptyUser, _ := json.Marshal([]User{})
-		w.Write(emptyUser)
+		_, _ = w.Write(emptyUser)
 		return
 	}
 
@@ -61,7 +61,7 @@ func SearchServer(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Inside xml error")
 		w.WriteHeader(http.StatusBadRequest)
 		data, _ := json.Marshal([]User{})
-		w.Write(data)
+		_, _ = w.Write(data)
 		return
 	}
 
@@ -71,7 +71,7 @@ func SearchServer(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("cant unpack result xml: ", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 		data, _ := json.Marshal([]User{})
-		w.Write([]byte(data))
+		_, _ = w.Write([]byte(data))
 		return
 	}
 
@@ -147,12 +147,10 @@ func SearchServer(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("cant pack result json: ", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 		data, _ := json.Marshal([]User{})
-		w.Write(data)
+		_, _ = w.Write(data)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(result))
-
-	return
+	_, _ = w.Write([]byte(result))
 }
