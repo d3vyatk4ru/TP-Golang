@@ -19,15 +19,16 @@ type Root struct {
 }
 
 type Row struct {
-	XMLName    xml.Name `xml:"row"`
-	Id         int      `xml:"id"`
-	Age        int      `xml:"age"`
-	First_name string   `xml:"first_name"`
-	Last_name  string   `xml:"last_name"`
-	Gender     string   `xml:"gender"`
-	About      string   `xml:"about"`
+	XMLName   xml.Name `xml:"row"`
+	ID        int      `xml:"id"`
+	Age       int      `xml:"age"`
+	FirstName string   `xml:"first_name"`
+	LastName  string   `xml:"last_name"`
+	Gender    string   `xml:"gender"`
+	About     string   `xml:"about"`
 }
 
+//nolint:gocyclo
 func SearchServer(w http.ResponseWriter, r *http.Request) {
 
 	var record Root
@@ -39,18 +40,37 @@ func SearchServer(w http.ResponseWriter, r *http.Request) {
 	if accessToken != "AccessToken" {
 		fmt.Println("Bad AccessToken")
 		w.WriteHeader(http.StatusUnauthorized)
-		emptyUser, _ := json.Marshal([]User{})
-		_, _ = w.Write(emptyUser)
+		emptyUser, err := json.Marshal([]User{})
+		if err != nil {
+			fmt.Println("Bad pack json")
+		}
+		_, err = w.Write(emptyUser)
+		if err != nil {
+			fmt.Println("Bad write response")
+		}
 		return
 	}
 
-	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
 
-	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
+	if err != nil {
+		fmt.Println("Bad convert to int")
+		return
+	}
 
-	order_by, _ := strconv.Atoi(r.URL.Query().Get("order_by"))
+	offset, err := strconv.Atoi(r.URL.Query().Get("offset"))
+	if err != nil {
+		fmt.Println("Bad convert to int")
+		return
+	}
 
-	order_field := r.URL.Query().Get("order_field")
+	OrderBy, err := strconv.Atoi(r.URL.Query().Get("order_by"))
+	if err != nil {
+		fmt.Println("Bad convert to int")
+		return
+	}
+
+	OrderField := r.URL.Query().Get("order_field")
 
 	query := r.URL.Query().Get("query")
 
@@ -60,8 +80,14 @@ func SearchServer(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Trouble with xml file: ", err.Error())
 		fmt.Println("Inside xml error")
 		w.WriteHeader(http.StatusBadRequest)
-		data, _ := json.Marshal([]User{})
-		_, _ = w.Write(data)
+		data, err2 := json.Marshal([]User{})
+		if err2 != nil {
+			fmt.Println("Bad pack json")
+		}
+		_, err2 = w.Write(data)
+		if err2 != nil {
+			fmt.Println("Bad write response")
+		}
 		return
 	}
 
@@ -70,8 +96,14 @@ func SearchServer(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Println("cant unpack result xml: ", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
-		data, _ := json.Marshal([]User{})
-		_, _ = w.Write([]byte(data))
+		data, err2 := json.Marshal([]User{})
+		if err2 != nil {
+			fmt.Println("Bad pack json")
+		}
+		_, err2 = w.Write(data)
+		if err2 != nil {
+			fmt.Println("Bad write response")
+		}
 		return
 	}
 
@@ -81,45 +113,46 @@ func SearchServer(w http.ResponseWriter, r *http.Request) {
 		data = record.Rows[offset : offset+limit]
 	}
 
-	if order_field == "Id" {
+	switch OrderField {
+	case "Id":
 
-		if order_by == -1 {
+		if OrderBy == -1 {
 			sort.Slice(data, func(i, j int) bool {
-				return data[i].Id > data[j].Id
+				return data[i].ID > data[j].ID
 			})
 		}
 
-		if order_by == 1 {
+		if OrderBy == 1 {
 			sort.Slice(data, func(i, j int) bool {
-				return data[i].Id < data[j].Id
+				return data[i].ID < data[j].ID
 			})
 		}
-	} else if order_field == "Age" {
+	case "Age":
 
-		if order_by == -1 {
+		if OrderBy == -1 {
 			sort.Slice(data, func(i, j int) bool {
 				return data[i].Age > data[j].Age
 			})
 		}
 
-		if order_by == 1 {
+		if OrderBy == 1 {
 			sort.Slice(data, func(i, j int) bool {
 				return data[i].Age < data[j].Age
 			})
 		}
-	} else {
+	default:
 
-		if order_by == -1 {
+		if OrderBy == -1 {
 			sort.Slice(data, func(i, j int) bool {
-				return data[i].First_name+data[i].Last_name >
-					data[j].First_name+data[j].Last_name
+				return data[i].FirstName+data[i].LastName >
+					data[j].FirstName+data[j].LastName
 			})
 		}
 
-		if order_by == 1 {
+		if OrderBy == 1 {
 			sort.Slice(data, func(i, j int) bool {
-				return data[i].First_name+data[i].Last_name <
-					data[j].First_name+data[j].Last_name
+				return data[i].FirstName+data[i].LastName <
+					data[j].FirstName+data[j].LastName
 			})
 		}
 	}
@@ -127,12 +160,12 @@ func SearchServer(w http.ResponseWriter, r *http.Request) {
 	for _, row := range data {
 
 		if strings.Contains(row.About, query) ||
-			strings.Contains(row.First_name+row.Last_name, query) ||
+			strings.Contains(row.FirstName+row.LastName, query) ||
 			strings.Contains(row.Gender, query) {
 			user = append(user,
 				User{
-					ID:     row.Id,
-					Name:   row.First_name + row.Last_name,
+					ID:     row.ID,
+					Name:   row.FirstName + row.LastName,
 					Age:    row.Age,
 					About:  row.About,
 					Gender: row.Gender,
@@ -146,11 +179,21 @@ func SearchServer(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Println("cant pack result json: ", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
-		data, _ := json.Marshal([]User{})
-		_, _ = w.Write(data)
+		data, err2 := json.Marshal([]User{})
+		if err2 != nil {
+			fmt.Println("Bad pack json")
+		}
+		_, err2 = w.Write(data)
+		if err2 != nil {
+			fmt.Println("Bad write response")
+		}
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(result))
+	_, err = w.Write(result)
+
+	if err != nil {
+		fmt.Println("Bad write response")
+	}
 }
